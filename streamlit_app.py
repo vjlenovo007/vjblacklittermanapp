@@ -126,7 +126,7 @@ if use_custom:
                 value=0.0, step=0.01, format="%.2f"
             )
             custom_views[tkr] = val / 100
-submit = st.sidebar.button("Run Optimization")("Run Optimization")
+submit = st.sidebar.button("Run Optimization")
 
 # -- Main --
 if submit:
