@@ -96,17 +96,45 @@ def run_black_litterman(
 # -- Sidebar Inputs --
 st.sidebar.header("🔧 Configuration")
 use_max = st.sidebar.checkbox("Use Maximum Historical Data", value=False)
-# Date range selection when not using max history
+# Ticker input
+ tickers_input = st.sidebar.text_input("Tickers (comma-separated)")
+# Determine dynamic date bounds based on full history
+ticker_list_tmp = [t.strip().upper() for t in tickers_input.split(',') if t.strip()]
+if not use_max and ticker_list_tmp:
+    starts, ends = [], []
+    for tkr in ticker_list_tmp:
+        try:
+            h = yf.Ticker(tkr).history(period="max")[['Close']]
+            if not h.empty:
+                starts.append(h.index.min().date())
+                ends.append(h.index.max().date())
+        except Exception:
+            pass
+    if starts and ends:
+        global_min = min(starts)
+        global_max = max(ends)
+    else:
+        global_min = date.today().replace(year=date.today().year-1)
+        global_max = date.today()
+else:
+    global_min = None
+    global_max = None
+
+# Date range selection
 if not use_max:
-    start_date = st.sidebar.date_input("Start Date", date.today().replace(year=date.today().year-1),
-                                      min_value=date(1900,1,1), max_value=date.today())
-    end_date   = st.sidebar.date_input("End Date", date.today(),
-                                      min_value=start_date, max_value=date.today())
+    start_date = st.sidebar.date_input(
+        "Start Date", global_min or date.today().replace(year=date.today().year-1),
+        min_value=global_min or date.today().replace(year=date.today().year-1),
+        max_value=global_max or date.today()
+    )
+    end_date = st.sidebar.date_input(
+        "End Date", global_max or date.today(),
+        min_value=start_date,
+        max_value=global_max or date.today()
+    )
 else:
     start_date = None
-    end_date   = None
-# Ticker input
-tickers_input = st.sidebar.text_input("Tickers (comma-separated)")
+    end_date = None
 allow_short = st.sidebar.checkbox("Allow Short Positions", value=False)
 use_custom = st.sidebar.checkbox("Customize Expected Returns (Opinion)", value=False)
 views_as_delta = False
