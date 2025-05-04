@@ -18,6 +18,7 @@ plt.style.use('ggplot')
 def fetch_data(tickers: list[str], start_date: date, end_date: date) -> pd.DataFrame:
     """
     Fetch historical price data from Yahoo Finance for given tickers and date range.
+    Caches results to avoid repeated API calls for the same inputs.
     Returns empty DataFrame on failure.
     """
     all_data = []
@@ -25,7 +26,7 @@ def fetch_data(tickers: list[str], start_date: date, end_date: date) -> pd.DataF
         try:
             hist = yf.Ticker(ticker).history(start=start_date, end=end_date)[['Close']]
             if hist.empty:
-                st.warning(f"No data for {ticker}.")
+                st.warning(f"No data for {ticker} between {start_date} and {end_date}.")
                 continue
             hist = hist.rename(columns={'Close': ticker})
             hist.index.name = 'Date'
