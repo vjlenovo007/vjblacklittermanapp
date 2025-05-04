@@ -140,6 +140,21 @@ if submit:
         if df.empty:
             st.error("No data fetched.")
         else:
+            # Show data range for each ticker
+            st.subheader("📅 Data Availability Ranges")
+            ranges = {}
+            for tkr in tickers:
+                try:
+                    hist_full = yf.Ticker(tkr).history(period="max")[['Close']]
+                    if not hist_full.empty:
+                        start = hist_full.index.min().date()
+                        end = hist_full.index.max().date()
+                        ranges[tkr] = {'Start Date': start, 'End Date': end}
+                except Exception as e:
+                    ranges[tkr] = {'Start Date': None, 'End Date': None}
+            ranges_df = pd.DataFrame.from_dict(ranges, orient='index')
+            st.dataframe(ranges_df)
+
             weights, ret_bl, cov_bl = run_black_litterman(df, allow_short, custom_views, use_market_cap)
             # Compute frontier
             mu_hist = expected_returns.mean_historical_return(df)
