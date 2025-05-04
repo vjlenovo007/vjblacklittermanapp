@@ -140,6 +140,14 @@ if submit:
             with tabs[0]:
                 st.subheader("Price Trends")
                 st.line_chart(df)
+
+                st.subheader("Historical Returns")
+                # Display percentage returns used for weight calculation
+                try:
+                    returns = df.pct_change().dropna()
+                    st.dataframe(returns)
+                except Exception as e:
+                    st.error(f"Error displaying returns: {e}")
                 st.subheader("Optimal Weights")
                 st.bar_chart(pd.Series(weights))
                 st.subheader("Posterior Expected Returns")
