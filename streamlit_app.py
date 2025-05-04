@@ -180,3 +180,4 @@ if submit:
                 st.pyplot(fig_ef)
 else:
     st.info("Configure options in the sidebar and click 'Run Optimization'.")
+ 
