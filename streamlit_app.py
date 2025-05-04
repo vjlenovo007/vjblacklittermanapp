@@ -189,7 +189,11 @@ if submit:
             ranges_df = pd.DataFrame.from_dict(ranges, orient='index')
             st.dataframe(ranges_df)
 
-            weights, ret_bl, cov_bl = run_black_litterman(df, allow_short, custom_views, use_market_cap)
+            result = run_black_litterman(df, allow_short, custom_views, use_market_cap)
+            if result is None:
+                st.error("Optimization could not be completed with the given views/constraints.")
+                return
+            weights, ret_bl, cov_bl = result
             # Compute frontier
             mu_hist = expected_returns.mean_historical_return(df)
             Sigma_hist = risk_models.sample_cov(df)
