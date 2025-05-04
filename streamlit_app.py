@@ -113,8 +113,7 @@ def run_black_litterman(
 # -- Sidebar Inputs --
 st.sidebar.header("🔧 Configuration")
 use_max = st.sidebar.checkbox("Use Maximum Historical Data", value=False)
-tickers_input = st.sidebar.text_input("Tickers (comma-separated)
-")
+tickers_input = st.sidebar.text_input("Tickers (comma-separated)")
 allow_short = st.sidebar.checkbox("Allow Short Positions", value=False)
 use_market_cap = st.sidebar.checkbox("Use Market-Cap Prior", value=False)
 use_custom = st.sidebar.checkbox("Customize Expected Returns (Opinion)", value=False)
