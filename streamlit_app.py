@@ -64,19 +64,43 @@ def run_black_litterman(df: pd.DataFrame, allow_short: bool, custom_views: dict)
 
 # -- Sidebar Inputs --
 st.sidebar.header("🔧 Configuration")
-with st.sidebar.form(key='config'):
-    start_date = st.date_input("Start Date", date.today().replace(year=date.today().year-1))
-    end_date   = st.date_input("End Date", date.today())
-    tickers    = st.text_input("Tickers (comma-separated)")
-    allow_short = st.checkbox("Allow Short Positions")
-    use_custom = st.checkbox("Customize Expected Returns (Opinion)")
-    custom_views = {}
-    if use_custom and tickers:
-        st.write("Enter your expected returns (%):")
-        for t in [t.strip().upper() for t in tickers.split(',') if t.strip()]:
-            val = st.number_input(f"{t}", min_value=-100.0, max_value=100.0, value=0.0)
-            custom_views[t] = val / 100
-    submit = st.form_submit_button("Run Optimization")
+# Date range selection
+start_date = st.sidebar.date_input(
+    "Start Date", date.today().replace(year=date.today().year-1)
+)
+end_date = st.sidebar.date_input(
+    "End Date", date.today()
+)
+# Ticker input
+tickers_input = st.sidebar.text_input(
+    "Tickers (comma-separated)"
+)
+# Short positions toggle
+allow_short = st.sidebar.checkbox(
+    "Allow Short Positions"
+)
+# Custom views toggle and inputs
+use_custom = st.sidebar.checkbox(
+    "Customize Expected Returns (Opinion)"
+)
+custom_views = {}
+# Prepare ticker list for custom views
+tickers_list_tmp = [t.strip().upper() for t in tickers_input.split(',') if t.strip()]
+if use_custom and tickers_list_tmp:
+    st.sidebar.markdown("---")
+    st.sidebar.write("### Enter expected returns (%) for each ticker")
+    for t in tickers_list_tmp:
+        val = st.sidebar.number_input(
+            f"{t}",
+            min_value=-100.0,
+            max_value=100.0,
+            value=0.0,
+            step=0.01,
+            format="%.2f"
+        )
+        custom_views[t] = val / 100
+# Run button
+submit = st.sidebar.button("Run Optimization")
 
 # -- Main --
 if submit:
