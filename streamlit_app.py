@@ -103,32 +103,58 @@ def run_black_litterman(df: pd.DataFrame, allow_short: bool, custom_views: dict,
 # -- Sidebar Inputs --
 st.sidebar.header("🔧 Configuration")
 use_max = st.sidebar.checkbox("Use Maximum Historical Data", value=False)
-# Date range selection (disabled when using max)
+# Prepare ticker list
+ticker_list_tmp = [t.strip().upper() for t in tickers_input.split(',') if t.strip()]
+# Determine date bounds
+if use_max or not ticker_list_tmp:
+    global_min = date.today().replace(year=date.today().year-1)
+    global_max = date.today()
+else:
+    dates = []
+    for t in ticker_list_tmp:
+        try:
+            h = yf.Ticker(t).history(period="max")[['Close']]
+            if not h.empty:
+                dates.append((h.index.min().date(), h.index.max().date()))
+        except Exception:
+            pass
+    if dates:
+        global_min = min(d[0] for d in dates)
+        global_max = max(d[1] for d in dates)
+    else:
+        global_min = date.today().replace(year=date.today().year-1)
+        global_max = date.today()
+# Date inputs
 if use_max:
     st.sidebar.info("Using full available history for each ticker")
     start_date = None
     end_date = None
 else:
     start_date = st.sidebar.date_input(
-        "Start Date", date.today().replace(year=date.today().year-1)
+        "Start Date",
+        value=global_min,
+        min_value=global_min,
+        max_value=global_max
     )
     end_date = st.sidebar.date_input(
-        "End Date", date.today()
+        "End Date",
+        value=global_max,
+        min_value=global_min,
+        max_value=global_max
     )
-# Ticker input
+# Other inputs
 tickers_input = st.sidebar.text_input("Tickers (comma-separated)")
 allow_short = st.sidebar.checkbox("Allow Short Positions")
 use_custom = st.sidebar.checkbox("Customize Expected Returns (Opinion)")
 use_market_cap = st.sidebar.checkbox("Use Market-Cap Prior", value=False)
 custom_views = {}
-ticker_list_tmp = [t.strip().upper() for t in tickers_input.split(',') if t.strip()]
 if use_custom and ticker_list_tmp:
     st.sidebar.markdown("---")
     st.sidebar.write("### Enter views (% expected return)")
     for t in ticker_list_tmp:
         val = st.sidebar.number_input(f"{t}", min_value=-100.0, max_value=100.0, value=0.0, step=0.01)
         custom_views[t] = val / 100
-submit = st.sidebar.button("Run Optimization")
+submit = st.sidebar.button("Run Optimization")("Run Optimization")
 
 # -- Main --
 if submit:
