@@ -100,10 +100,16 @@ def main():
             with col1:
                 st.subheader("Optimal Weights")
                 st.bar_chart(weights)
+                # Handle pie chart when negative weights present
                 fig_w, ax_w = plt.subplots()
-                weights.plot.pie(autopct='%.1f%%', ax=ax_w)
-                ax_w.set_ylabel('')
-                st.pyplot(fig_w)
+                positive_weights = weights.clip(lower=0)
+                if positive_weights.sum() > 0:
+                    normalized = positive_weights / positive_weights.sum()
+                    normalized.plot.pie(autopct='%.1f%%', ax=ax_w)
+                    ax_w.set_ylabel('')
+                    st.pyplot(fig_w)
+                else:
+                    st.info("Pie chart skipped due to negative or zero weights.")
             with col2:
                 st.subheader("Posterior Expected Returns")
                 st.dataframe(ret_bl.to_frame("Expected Return"))
