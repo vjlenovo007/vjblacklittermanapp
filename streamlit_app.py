@@ -108,42 +108,27 @@ if submit:
 
             with tabs[0]:
                 st.subheader("Price Trends")
-                # Plot price trends with professional color palette
+                # Simple price line chart
                 try:
-                    fig_pt, ax_pt = plt.subplots()
-                    colors = plt.get_cmap('tab10').colors
-                    for idx, col in enumerate(df.columns):
-                        ax_pt.plot(df.index, df[col], label=col, color=colors[idx % len(colors)])
-                    ax_pt.set_title('Price Trends')
-                    ax_pt.set_xlabel('Date')
-                    ax_pt.set_ylabel('Price')
-                    ax_pt.legend()
-                    st.pyplot(fig_pt)
+                    st.line_chart(df)
                 except Exception as e:
                     st.error(f"Error displaying Price Trends: {e}")
 
                 col1, col2 = st.columns([2,1])
                 with col1:
                     st.subheader("Optimal Weights")
-                    # Bar chart with professional palette
+                    # Basic bar chart
                     try:
-                        fig_wb, ax_wb = plt.subplots()
-                        colors = plt.get_cmap('tab10').colors
-                        weights.plot.bar(ax=ax_wb, color=[colors[i % len(colors)] for i in range(len(weights))])
-                        ax_wb.set_title('Optimal Weights')
-                        ax_wb.set_ylabel('Weight')
-                        st.pyplot(fig_wb)
+                        st.bar_chart(weights)
                     except Exception as e:
                         st.error(f"Error displaying bar chart: {e}")
-                    # Pie chart
+                    # Pie chart for weights
                     fig_w, ax_w = plt.subplots()
                     pos = weights.clip(lower=0)
                     if pos.sum() > 0:
                         norm = pos / pos.sum()
-                        colors = plt.get_cmap('tab10').colors
-                        norm.plot.pie(autopct='%.1f%%', ax=ax_w, colors=colors[:len(norm)])
+                        norm.plot.pie(autopct='%.1f%%', ax=ax_w)
                         ax_w.set_ylabel('')
-                        ax_w.set_title('Weight Distribution')
                         st.pyplot(fig_w)
                     else:
                         st.info("Pie chart skipped due to negative or zero weights.")
@@ -157,27 +142,20 @@ if submit:
 
                 st.subheader("Posterior Expected Returns & Covariance")
                 try:
-                    fig_er, ax_er = plt.subplots()
-                    ret_bl.plot.bar(ax=ax_er, color=[colors[i % len(colors)] for i in range(len(ret_bl))])
-                    ax_er.set_title('Posterior Expected Returns')
-                    ax_er.set_ylabel('Return')
-                    st.pyplot(fig_er)
+                    st.dataframe(ret_bl.to_frame('Expected Return'))
                 except Exception as e:
                     st.error(f"Error displaying Posterior Expected Returns: {e}")
                 try:
-                    fig_cov, ax_cov = plt.subplots()
-                    im = ax_cov.imshow(cov_bl.values, cmap='Blues')
-                    ax_cov.set_xticks(range(len(cov_bl.columns)))
-                    ax_cov.set_yticks(range(len(cov_bl.index)))
-                    ax_cov.set_xticklabels(cov_bl.columns, rotation=45, ha='right')
-                    ax_cov.set_yticklabels(cov_bl.index)
-                    ax_cov.set_title('Posterior Covariance Matrix')
-                    fig_cov.colorbar(im, ax=ax_cov)
-                    st.pyplot(fig_cov)
+                    st.dataframe(cov_bl)
                 except Exception as e:
                     st.error(f"Error displaying Covariance Matrix: {e}")
 
             with tabs[1]:
+                st.subheader("Efficient Frontier")
+                try:
+                    st.pyplot(fig_ef)
+                except Exception as e:
+                    st.error(f"Error displaying Efficient Frontier: {e}")
                 st.subheader("Efficient Frontier")
                 try:
                     st.pyplot(fig_ef)
