@@ -101,39 +101,39 @@ if submit:
             ax_ef.set_title('Efficient Frontier')
             ax_ef.legend()
 
-            # Main display
+                        # Main display
             st.header("📊 Optimization Results")
             tabs = st.tabs(["Weights & Metrics", "Efficient Frontier"])
 
-with tabs[0]:
-    col1, col2 = st.columns([2,1])
-    with col1:
-        st.subheader("Optimal Weights")
-        st.bar_chart(weights)
-        fig_w, ax_w = plt.subplots()
-        pos = weights.clip(lower=0)
-        if pos.sum() > 0:
-            norm = pos / pos.sum()
-            colors = plt.get_cmap('tab10').colors
-            norm.plot.pie(autopct='%.1f%%', ax=ax_w, colors=colors)
-            ax_w.set_ylabel('')
-            ax_w.set_title('Weight Distribution')
-            st.pyplot(fig_w)
-    with col2:
-        st.subheader("Key Portfolio Metrics")
-        metric_col1, metric_col2 = st.columns(2)
-        metric_col1.metric("Max Sharpe Return", f"{r_max:.2%}")
-        metric_col2.metric("Max Sharpe Volatility", f"{v_max:.2%}")
-        metric_col1.metric("Min Vol Return", f"{r_min:.2%}")
-        metric_col2.metric("Min Vol Volatility", f"{v_min:.2%}")
+            with tabs[0]:
+                col1, col2 = st.columns([2,1])
+                with col1:
+                    st.subheader("Optimal Weights")
+                    st.bar_chart(weights)
+                    fig_w, ax_w = plt.subplots()
+                    pos = weights.clip(lower=0)
+                    if pos.sum() > 0:
+                        norm = pos / pos.sum()
+                        colors = plt.get_cmap('tab10').colors
+                        norm.plot.pie(autopct='%.1f%%', ax=ax_w, colors=colors)
+                        ax_w.set_ylabel('')
+                        ax_w.set_title('Weight Distribution')
+                        st.pyplot(fig_w)
+                with col2:
+                    st.subheader("Key Portfolio Metrics")
+                    metric_col1, metric_col2 = st.columns(2)
+                    metric_col1.metric("Max Sharpe Return", f"{r_max:.2%}")
+                    metric_col2.metric("Max Sharpe Volatility", f"{v_max:.2%}")
+                    metric_col1.metric("Min Vol Return", f"{r_min:.2%}")
+                    metric_col2.metric("Min Vol Volatility", f"{v_min:.2%}")
 
-    st.subheader("Posterior Expected Returns & Covariance")
-    st.dataframe(ret_bl.to_frame('Expected Return'))
-    st.dataframe(cov_bl)
+                st.subheader("Posterior Expected Returns & Covariance")
+                st.dataframe(ret_bl.to_frame('Expected Return'))
+                st.dataframe(cov_bl)
 
-with tabs[1]:
-    st.subheader("Efficient Frontier")
-    try:
-        st.pyplot(fig_ef)
-    except Exception as e:
-        st.error(f"Error displaying Efficient Frontier: {e}")
+            with tabs[1]:
+                st.subheader("Efficient Frontier")
+                try:
+                    st.pyplot(fig_ef)
+                except Exception as e:
+                    st.error(f"Error displaying Efficient Frontier: {e}")
