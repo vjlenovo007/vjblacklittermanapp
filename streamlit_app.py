@@ -82,7 +82,6 @@ def run_black_litterman(df: pd.DataFrame) -> tuple[pd.Series, pd.Series, pd.Data
         return None
 
 # -- Streamlit UI --
-@st.cache_resource
 
 def main():
     st.title("Black-Litterman Portfolio Optimizer")
