@@ -114,13 +114,31 @@ def run_black_litterman(
 st.sidebar.header("🔧 Configuration")
 use_max = st.sidebar.checkbox("Use Maximum Historical Data", value=False)
 tickers_input = st.sidebar.text_input("Tickers (comma-separated)")
-views_as_delta = st.sidebar.checkbox(
-    "Treat views as delta on historical means", value=False,
-    help="If checked, custom views will be added to the historical mean returns"
-)
 allow_short = st.sidebar.checkbox("Allow Short Positions")
-use_custom = st.sidebar.checkbox("Customize Expected Returns (Opinion)")
 use_market_cap = st.sidebar.checkbox("Use Market-Cap Prior", value=False)
+
+# Customize opinions
+use_custom = st.sidebar.checkbox("Customize Expected Returns (Opinion)")
+views_as_delta = False
+custom_views = {}
+if use_custom:
+    # Option for delta vs absolute views
+    views_as_delta = st.sidebar.checkbox(
+        "Treat views as delta on historical means", value=False,
+        help="If checked, custom views will be added to the historical mean returns"
+    )
+    # Collect custom views
+    tickers_list = [t.strip().upper() for t in tickers_input.split(',') if t.strip()]
+    if tickers_list:
+        st.sidebar.markdown("---")
+        st.sidebar.write("### Custom Views (% expected return)")
+        for tkr in tickers_list:
+            val = st.sidebar.number_input(
+                f"{tkr}", min_value=-100.0, max_value=100.0, value=0.0, step=0.01
+            )
+            custom_views[tkr] = val / 100
+
+submit = st.sidebar.button("Run Optimization")("Use Market-Cap Prior", value=False)
 
 # Collect custom views
 custom_views = {}
