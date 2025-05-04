@@ -15,20 +15,27 @@ plt.style.use('ggplot')
 
 # -- Data Fetching --
 @st.cache_data(show_spinner=False)
-def fetch_data(tickers: list[str], start_date: date, end_date: date) -> pd.DataFrame:
-    """Fetch historical price data and cache results."""
+def fetch_data(tickers: list[str], start_date: date, end_date: date, use_max: bool) -> pd.DataFrame:
+    """Fetch historical price data and cache results. Use max history if requested."""
     all_data = []
     for ticker in tickers:
-        hist = yf.Ticker(ticker).history(start=start_date, end=end_date)[['Close']]
-        if hist.empty:
-            st.warning(f"No data for {ticker}.")
-            continue
-        hist = hist.rename(columns={'Close': ticker})
-        hist.index.name = 'Date'
-        all_data.append(hist)
+        try:
+            yf_tkr = yf.Ticker(ticker)
+            if use_max:
+                hist = yf_tkr.history(period="max")[['Close']]
+            else:
+                hist = yf_tkr.history(start=start_date, end=end_date)[['Close']]
+            if hist.empty:
+                st.warning(f"No data for {ticker}.")
+                continue
+            hist = hist.rename(columns={'Close': ticker})
+            hist.index.name = 'Date'
+            all_data.append(hist)
+        except Exception as e:
+            st.error(f"Fetching error for {ticker}: {e}")
     if not all_data:
         return pd.DataFrame()
-    return pd.concat(all_data, axis=1).dropna()
+    return pd.concat(all_data, axis=1).dropna()(all_data, axis=1).dropna()
 
 @st.cache_data(show_spinner=False)
 def fetch_market_caps(tickers: list[str]) -> pd.Series:
