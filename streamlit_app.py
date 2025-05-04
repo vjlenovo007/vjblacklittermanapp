@@ -1,6 +1,7 @@
 import streamlit as st
 import yfinance as yf
 import pandas as pd
+from datetime import date
 from pypfopt import risk_models, expected_returns, BlackLittermanModel, EfficientFrontier, plotting
 import matplotlib.pyplot as plt
 
@@ -8,18 +9,18 @@ st.set_page_config(page_title="Black-Litterman Portfolio Optimizer", layout="wid
 DATA_CACHE = "historical_data.csv"
 
 @st.cache_data(show_spinner=False)
-def fetch_data(tickers: list[str]) -> pd.DataFrame:
+def fetch_data(tickers: list[str], start_date: date, end_date: date) -> pd.DataFrame:
     """
-    Fetch max-available historical price data from Yahoo Finance for given tickers.
+    Fetch historical price data from Yahoo Finance for given tickers and date range.
     Returns empty DataFrame on failure.
     """
     all_data = []
     for ticker in tickers:
         try:
             stock = yf.Ticker(ticker)
-            hist = stock.history(period="max")[['Close']]
+            hist = stock.history(start=start_date, end=end_date)[['Close']]
             if hist.empty:
-                st.warning(f"No data returned for {ticker}.")
+                st.warning(f"No data returned for {ticker} between {start_date} and {end_date}.")
                 continue
             hist = hist.rename(columns={'Close': ticker})
             hist.index.name = 'Date'
@@ -79,8 +80,19 @@ def run_black_litterman(df: pd.DataFrame, allow_short: bool) -> tuple[pd.Series,
 # -- Streamlit UI --
 def main():
     st.title("Black-Litterman Portfolio Optimizer")
-    st.markdown("Enter comma-separated ticker symbols (e.g. AAPL, MSFT) and choose constraints to optimize your portfolio.")
+    st.markdown("Select a date range, enter comma-separated ticker symbols (e.g. AAPL, MSFT), and choose constraints to optimize your portfolio.")
 
+    # Date inputs
+    col_dates = st.columns(2)
+    with col_dates[0]:
+        start_date = st.date_input("Start Date", value=date.today().replace(year=date.today().year-1))
+    with col_dates[1]:
+        end_date = st.date_input("End Date", value=date.today())
+    if start_date >= end_date:
+        st.error("Start Date must be before End Date.")
+        return
+
+    # Ticker input and constraints
     tickers_input = st.text_input("Ticker Symbols:")
     tickers = [t.strip().upper() for t in tickers_input.split(',') if t.strip()]
     allow_short = st.checkbox("Allow short positions", value=False)
@@ -91,9 +103,9 @@ def main():
             return
 
         with st.spinner("Fetching data from Yahoo Finance..."):
-            df = fetch_data(tickers)
+            df = fetch_data(tickers, start_date, end_date)
         if df.empty or df.shape[0] < 2:
-            st.error("Insufficient data fetched. Please check ticker symbols and try again.")
+            st.error("Insufficient data fetched. Please check ticker symbols and date range.")
             return
 
         st.success(f"Fetched data for {len(tickers)} symbols from {df.index.min().date()} to {df.index.max().date()}")
