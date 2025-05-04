@@ -128,7 +128,7 @@ if use_custom and ticker_list_tmp:
     for t in ticker_list_tmp:
         val = st.sidebar.number_input(f"{t}", min_value=-100.0, max_value=100.0, value=0.0, step=0.01)
         custom_views[t] = val / 100
-submit = st.sidebar.button("Run Optimization")("Run Optimization")
+submit = st.sidebar.button("Run Optimization")
 
 # -- Main --
 if submit:
