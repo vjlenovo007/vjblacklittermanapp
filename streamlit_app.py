@@ -89,13 +89,17 @@ def run_black_litterman(df: pd.DataFrame, allow_short: bool, custom_views: dict,
     ret_bl = bl.bl_returns()
     cov_bl = bl.bl_cov()
 
-    # Optimization
-    if allow_short:
-        raw_w = bl.optimize()
-    else:
-        ef_post = EfficientFrontier(ret_bl, cov_bl)
-        ef_post.max_sharpe()
-        raw_w = ef_post.clean_weights()
+        # Optimization
+    try:
+        if allow_short:
+            raw_w = bl.optimize()
+        else:
+            ef_post = EfficientFrontier(ret_bl, cov_bl)
+            ef_post.max_sharpe()
+            raw_w = ef_post.clean_weights()
+    except Exception as e:
+        st.error(f"Optimization failed: {e}")
+        return None
 
     weights = pd.Series(raw_w)
     return weights, ret_bl, cov_bl
