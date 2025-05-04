@@ -78,8 +78,7 @@ def run_black_litterman(
         )
     # Compute posterior returns and covariance
     ret_bl = bl.bl_returns()
-()
-    cov_bl = bl.bl_cov()
+    cov_bl = bl.bl_cov()()
 
     try:
         if allow_short:
