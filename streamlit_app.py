@@ -106,6 +106,9 @@ if submit:
             tabs = st.tabs(["Weights & Metrics", "Efficient Frontier"])
 
             with tabs[0]:
+                st.subheader("Price Trends")
+                st.line_chart(df)
+                col1, col2 = st.columns([2,1])
                 col1, col2 = st.columns([2,1])
                 with col1:
                     st.subheader("Optimal Weights")
