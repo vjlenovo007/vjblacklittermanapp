@@ -138,6 +138,12 @@ if submit:
         if df.empty:
             st.error("No data fetched for the given tickers.")
         else:
+            # Show data availability ranges for each ticker
+            st.subheader("📅 Data Availability Ranges")
+            ranges = {ticker: (df.index.min().date(), df.index.max().date()) for ticker in df.columns}
+            ranges_df = pd.DataFrame.from_dict(ranges, orient='index', columns=['Start Date','End Date'])
+            st.dataframe(ranges_df)
+
             result = run_black_litterman(
                 df,
                 allow_short,
