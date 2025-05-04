@@ -97,7 +97,7 @@ def run_black_litterman(
 st.sidebar.header("🔧 Configuration")
 use_max = st.sidebar.checkbox("Use Maximum Historical Data", value=False)
 # Ticker input
- tickers_input = st.sidebar.text_input("Tickers (comma-separated)")
+tickers_input = st.sidebar.text_input("Tickers (comma-separated)")("Tickers (comma-separated)")
 # Determine dynamic date bounds based on full history
 ticker_list_tmp = [t.strip().upper() for t in tickers_input.split(',') if t.strip()]
 if not use_max and ticker_list_tmp:
