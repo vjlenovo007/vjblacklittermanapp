@@ -37,22 +37,6 @@ def fetch_data(tickers: list[str]) -> pd.DataFrame:
         return pd.DataFrame()
 
 @st.cache_data(show_spinner=False)
-def load_cached_data() -> pd.DataFrame:
-    """
-    Load previously fetched data from CSV cache.
-    Returns empty DataFrame if cache missing or corrupt.
-    """
-    try:
-        df = pd.read_csv(DATA_CACHE, index_col='Date', parse_dates=True)
-        return df
-    except FileNotFoundError:
-        st.info("No cached data found.")
-        return pd.DataFrame()
-    except Exception as e:
-        st.error(f"Error loading cache: {e}")
-        return pd.DataFrame()
-
-@st.cache_data(show_spinner=False)
 def run_black_litterman(df: pd.DataFrame) -> tuple[pd.Series, pd.Series, pd.DataFrame] | None:
     """
     Calculate Black-Litterman posterior returns, covariance, and optimal weights.
@@ -75,7 +59,8 @@ def run_black_litterman(df: pd.DataFrame) -> tuple[pd.Series, pd.Series, pd.Data
                                   view_confidences=view_confidences)
         ret_bl = bl.bl_returns()
         cov_bl = bl.bl_cov()
-        weights = bl.optimize()
+        raw_weights = bl.optimize()  # returns dict or OrderedDict
+        weights = pd.Series(raw_weights)  # convert to Series for plotting
         return weights, ret_bl, cov_bl
     except Exception as e:
         st.error(f"Error running Black-Litterman model: {e}")
