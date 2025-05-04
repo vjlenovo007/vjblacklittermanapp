@@ -1,7 +1,7 @@
 import streamlit as st
 import yfinance as yf
 import pandas as pd
-from pypfopt import risk_models, expected_returns, BlackLittermanModel
+from pypfopt import risk_models, expected_returns, BlackLittermanModel, EfficientFrontier, plotting
 import matplotlib.pyplot as plt
 
 st.set_page_config(page_title="Black-Litterman Portfolio Optimizer", layout="wide")
@@ -59,15 +59,14 @@ def run_black_litterman(df: pd.DataFrame) -> tuple[pd.Series, pd.Series, pd.Data
                                   view_confidences=view_confidences)
         ret_bl = bl.bl_returns()
         cov_bl = bl.bl_cov()
-        raw_weights = bl.optimize()  # returns dict or OrderedDict
-        weights = pd.Series(raw_weights)  # convert to Series for plotting
+        raw_weights = bl.optimize()
+        weights = pd.Series(raw_weights)
         return weights, ret_bl, cov_bl
     except Exception as e:
         st.error(f"Error running Black-Litterman model: {e}")
         return None
 
 # -- Streamlit UI --
-
 def main():
     st.title("Black-Litterman Portfolio Optimizer")
     st.markdown("Enter comma-separated ticker symbols (e.g. AAPL, MSFT) to optimize your portfolio.")
@@ -95,6 +94,7 @@ def main():
         weights, ret_bl, cov_bl = result
         st.success("Optimization complete!")
 
+        # Display Black-Litterman results
         try:
             col1, col2 = st.columns(2)
             with col1:
@@ -110,7 +110,19 @@ def main():
                 st.subheader("Posterior Covariance")
                 st.dataframe(cov_bl)
         except Exception as e:
-            st.error(f"Error displaying results: {e}")
+            st.error(f"Error displaying BL results: {e}")
+
+        # Efficient Frontier
+        try:
+            mu = expected_returns.mean_historical_return(df)
+            Sigma = risk_models.sample_cov(df)
+            ef = EfficientFrontier(mu, Sigma)
+            fig_ef, ax_ef = plt.subplots()
+            plotting.plot_efficient_frontier(ef, ax=ax_ef, show_assets=False)
+            st.subheader("Efficient Frontier")
+            st.pyplot(fig_ef)
+        except Exception as e:
+            st.error(f"Error plotting efficient frontier: {e}")
 
 if __name__ == "__main__":
     main()
