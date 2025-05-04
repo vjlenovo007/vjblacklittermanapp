@@ -192,7 +192,7 @@ if submit:
             result = run_black_litterman(df, allow_short, custom_views, use_market_cap)
             if result is None:
                 st.error("Optimization could not be completed with the given views/constraints.")
-                return
+                st.stop()
             weights, ret_bl, cov_bl = result
             # Compute frontier
             mu_hist = expected_returns.mean_historical_return(df)
