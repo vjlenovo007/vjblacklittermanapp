@@ -1,6 +1,7 @@
 import streamlit as st
 import yfinance as yf
 import pandas as pd
+import numpy as np
 from pypfopt import risk_models, expected_returns, BlackLittermanModel
 import matplotlib.pyplot as plt
 
@@ -45,20 +46,24 @@ def run_black_litterman(df: pd.DataFrame) -> tuple[pd.Series, pd.Series, pd.Data
     """
     Calculate Black-Litterman posterior returns, covariance, and optimal weights.
     """
-    # Calculate returns
+    # Calculate historical returns
     returns = df.pct_change().dropna()
-    # Prior estimation
+    # Prior: equilibrium returns
     mu = expected_returns.mean_historical_return(df)
     Sigma = risk_models.sample_cov(df)
-    # Black-Litterman model
-    bl = BlackLittermanModel(Sigma, pi=mu)
+
+    # Define views: use equilibrium returns as neutral views with moderate confidence
+    Q = mu.values
+    view_confidences = np.array([0.5] * len(mu))
+    # Identity matrix for P implies each view is on a single asset
+    bl = BlackLittermanModel(Sigma, pi=mu, absolute_views=Q, view_confidences=view_confidences)
+    # Obtain posterior estimates
     ret_bl = bl.bl_returns()
     cov_bl = bl.bl_cov()
     weights = bl.optimize()
     return weights, ret_bl, cov_bl
 
 # -- Streamlit UI --
-
 def main():
     st.title("Black-Litterman Portfolio Optimizer")
     st.markdown("Enter comma-separated ticker symbols (e.g. AAPL, MSFT) to optimize your portfolio.")
