@@ -112,6 +112,8 @@ st.sidebar.header("🔧 Configuration")
 use_max = st.sidebar.checkbox("Use Maximum Historical Data", value=False)
 # Ticker input first
 tickers_input = st.sidebar.text_input("Tickers (comma-separated)")
+# Option for delta vs absolute views
+views_as_delta = st.sidebar.checkbox("Treat views as delta on historical means", value=False)
 # Prepare ticker list for dynamic date bounds and custom views
 ticker_list_tmp = [t.strip().upper() for t in tickers_input.split(',') if t.strip()]
 
@@ -154,6 +156,7 @@ else:
         max_value=global_max
     )
 # Other inputs
+tickers_input = tickers_input
 allow_short = st.sidebar.checkbox("Allow Short Positions")
 use_custom = st.sidebar.checkbox("Customize Expected Returns (Opinion)")
 use_market_cap = st.sidebar.checkbox("Use Market-Cap Prior", value=False)
@@ -165,7 +168,7 @@ if use_custom and ticker_list_tmp:
         val = st.sidebar.number_input(f"{t}", min_value=-100.0, max_value=100.0, value=0.0, step=0.01)
         custom_views[t] = val / 100
 # Single button call
-submit = st.sidebar.button("Run Optimization")
+submit = st.sidebar.button("Run Optimization")("Run Optimization")
 
 # -- Main --
 if submit:
