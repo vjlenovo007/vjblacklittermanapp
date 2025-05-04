@@ -96,15 +96,25 @@ def run_black_litterman(
 # -- Sidebar Inputs --
 st.sidebar.header("🔧 Configuration")
 use_max = st.sidebar.checkbox("Use Maximum Historical Data", value=False)
+# Date range selection when not using max history
+if not use_max:
+    start_date = st.sidebar.date_input("Start Date", date.today().replace(year=date.today().year-1),
+                                      min_value=date(1900,1,1), max_value=date.today())
+    end_date   = st.sidebar.date_input("End Date", date.today(),
+                                      min_value=start_date, max_value=date.today())
+else:
+    start_date = None
+    end_date   = None
+# Ticker input
 tickers_input = st.sidebar.text_input("Tickers (comma-separated)")
 allow_short = st.sidebar.checkbox("Allow Short Positions", value=False)
 use_custom = st.sidebar.checkbox("Customize Expected Returns (Opinion)", value=False)
-
 views_as_delta = False
 custom_views = {}
 if use_custom:
     views_as_delta = st.sidebar.checkbox(
-        "Treat views as delta on historical means", value=False
+        "Treat views as delta on historical means", value=False,
+        help="If checked, custom views will be added to the historical mean returns"
     )
     tickers_list_tmp = [t.strip().upper() for t in tickers_input.split(',') if t.strip()]
     if tickers_list_tmp:
@@ -116,8 +126,7 @@ if use_custom:
                 value=0.0, step=0.01, format="%.2f"
             )
             custom_views[tkr] = val / 100
-
-submit = st.sidebar.button("Run Optimization")
+submit = st.sidebar.button("Run Optimization")("Run Optimization")
 
 # -- Main --
 if submit:
