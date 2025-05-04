@@ -138,11 +138,25 @@ if submit:
         if df.empty:
             st.error("No data fetched for the given tickers.")
         else:
-            # Show data availability ranges for each ticker
+            # Show data availability ranges for each ticker (full history)
             st.subheader("📅 Data Availability Ranges")
-            ranges = {ticker: (df.index.min().date(), df.index.max().date()) for ticker in df.columns}
-            ranges_df = pd.DataFrame.from_dict(ranges, orient='index', columns=['Start Date','End Date'])
-            st.dataframe(ranges_df)
+            full_ranges = {}
+            for tkr in tickers_list:
+                try:
+                    full_hist = yf.Ticker(tkr).history(period="max")[['Close']]
+                    start_full = full_hist.index.min().date() if not full_hist.empty else None
+                    end_full = full_hist.index.max().date() if not full_hist.empty else None
+                    full_ranges[tkr] = {'Full Start Date': start_full, 'Full End Date': end_full}
+                except Exception:
+                    full_ranges[tkr] = {'Full Start Date': None, 'Full End Date': None}
+            full_ranges_df = pd.DataFrame.from_dict(full_ranges, orient='index')
+            st.dataframe(full_ranges_df)
+
+            # Also show fetched data range
+            fetched_ranges = {tkr: (df.index.min().date(), df.index.max().date()) for tkr in df.columns}
+            fetched_ranges_df = pd.DataFrame.from_dict(fetched_ranges, orient='index', columns=['Fetched Start Date','Fetched End Date'])
+            st.subheader("🗓️ Fetched Data Range")
+            st.dataframe(fetched_ranges_df)
 
             result = run_black_litterman(
                 df,
