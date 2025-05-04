@@ -103,9 +103,19 @@ def run_black_litterman(df: pd.DataFrame, allow_short: bool, custom_views: dict,
 # -- Sidebar Inputs --
 st.sidebar.header("🔧 Configuration")
 use_max = st.sidebar.checkbox("Use Maximum Historical Data", value=False)
-st.sidebar.header("🔧 Configuration")
-start_date = st.sidebar.date_input("Start Date", date.today().replace(year=date.today().year-1))
-end_date   = st.sidebar.date_input("End Date", date.today())
+# Date range selection (disabled when using max)
+if use_max:
+    st.sidebar.info("Using full available history for each ticker")
+    start_date = None
+    end_date = None
+else:
+    start_date = st.sidebar.date_input(
+        "Start Date", date.today().replace(year=date.today().year-1)
+    )
+    end_date = st.sidebar.date_input(
+        "End Date", date.today()
+    )
+# Ticker input
 tickers_input = st.sidebar.text_input("Tickers (comma-separated)")
 allow_short = st.sidebar.checkbox("Allow Short Positions")
 use_custom = st.sidebar.checkbox("Customize Expected Returns (Opinion)")
@@ -118,7 +128,7 @@ if use_custom and ticker_list_tmp:
     for t in ticker_list_tmp:
         val = st.sidebar.number_input(f"{t}", min_value=-100.0, max_value=100.0, value=0.0, step=0.01)
         custom_views[t] = val / 100
-submit = st.sidebar.button("Run Optimization")
+submit = st.sidebar.button("Run Optimization")("Run Optimization")
 
 # -- Main --
 if submit:
