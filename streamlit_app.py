@@ -111,6 +111,7 @@ else:
 # Tickers and options
 tickers_input = st.sidebar.text_input("Tickers (comma-separated)")
 allow_short = st.sidebar.checkbox("Allow Short Positions", value=False)
+use_market_cap = st.sidebar.checkbox("Use Market-Cap Prior", value=False)
 use_custom = st.sidebar.checkbox("Customize Expected Returns (Opinion)", value=False)
 views_as_delta = False
 custom_views = {}
