@@ -102,6 +102,8 @@ def run_black_litterman(df: pd.DataFrame, allow_short: bool, custom_views: dict,
 
 # -- Sidebar Inputs --
 st.sidebar.header("🔧 Configuration")
+use_max = st.sidebar.checkbox("Use Maximum Historical Data", value=False)
+st.sidebar.header("🔧 Configuration")
 start_date = st.sidebar.date_input("Start Date", date.today().replace(year=date.today().year-1))
 end_date   = st.sidebar.date_input("End Date", date.today())
 tickers_input = st.sidebar.text_input("Tickers (comma-separated)")
