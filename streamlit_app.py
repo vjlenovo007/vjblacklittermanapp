@@ -42,7 +42,8 @@ def run_black_litterman(
     df: pd.DataFrame,
     allow_short: bool,
     custom_views: dict,
-    views_as_delta: bool
+    views_as_delta: bool,
+    use_market_cap: bool
 ) -> tuple[pd.Series, pd.Series, pd.DataFrame] | None:
     mu = expected_returns.mean_historical_return(df)
     Sigma = risk_models.sample_cov(df)
@@ -56,7 +57,25 @@ def run_black_litterman(
         abs_views = mu
         conf = pd.Series(0.5, index=mu.index)
 
-    bl = BlackLittermanModel(
+    # Instantiate BL model with chosen prior
+    if use_market_cap:
+        caps = fetch_market_caps(df.columns.tolist())
+        w_mkt = caps / caps.sum()
+        delta = 2.5
+        bl = BlackLittermanModel(
+            cov_matrix=Sigma,
+            market_weights=w_mkt,
+            risk_aversion=delta,
+            absolute_views=abs_views,
+            view_confidences=conf
+        )
+    else:
+        bl = BlackLittermanModel(
+            cov_matrix=Sigma,
+            pi=mu,
+            absolute_views=abs_views,
+            view_confidences=conf
+        )
         cov_matrix=Sigma,
         pi=mu,
         absolute_views=abs_views,
@@ -143,7 +162,7 @@ if submit:
 
             # Optimization
             result = run_black_litterman(
-                df, allow_short, custom_views, views_as_delta
+                df, allow_short, custom_views, views_as_delta, use_market_cap
             )
             if result is None:
                 st.stop()
@@ -180,4 +199,3 @@ if submit:
                 st.pyplot(fig_ef)
 else:
     st.info("Configure options in the sidebar and click 'Run Optimization'.")
- 
