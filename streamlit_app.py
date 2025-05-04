@@ -145,14 +145,25 @@ def main():
         except Exception as e:
             st.error(f"Error displaying BL results: {e}")
 
-        # Efficient Frontier
+        # Efficient Frontier with Min Vol and Max Sharpe markers
         try:
             mu_hist = expected_returns.mean_historical_return(df)
             Sigma_hist = risk_models.sample_cov(df)
             ef = EfficientFrontier(mu_hist, Sigma_hist)
             fig_ef, ax_ef = plt.subplots()
             plotting.plot_efficient_frontier(ef, ax=ax_ef, show_assets=False)
-            ax_ef.set_title('Efficient Frontier')
+            # Max Sharpe
+            ef_max = EfficientFrontier(mu_hist, Sigma_hist)
+            ef_max.max_sharpe()
+            ret_max, vol_max, _ = ef_max.portfolio_performance()
+            ax_ef.scatter(vol_max, ret_max, marker='*', s=200, label='Max Sharpe')
+            # Min Volatility
+            ef_min = EfficientFrontier(mu_hist, Sigma_hist)
+            ef_min.min_volatility()
+            ret_min, vol_min, _ = ef_min.portfolio_performance()
+            ax_ef.scatter(vol_min, ret_min, marker='o', s=100, label='Min Volatility')
+            ax_ef.set_title('Efficient Frontier with Key Portfolios')
+            ax_ef.legend()
             st.subheader("Efficient Frontier")
             st.pyplot(fig_ef)
         except Exception as e:
