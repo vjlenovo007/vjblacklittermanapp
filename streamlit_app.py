@@ -35,7 +35,7 @@ def fetch_data(tickers: list[str], start_date: date, end_date: date, use_max: bo
             st.error(f"Fetching error for {ticker}: {e}")
     if not all_data:
         return pd.DataFrame()
-    return pd.concat(all_data, axis=1).dropna()(all_data, axis=1).dropna()
+    return pd.concat(all_data, axis=1).dropna()
 
 @st.cache_data(show_spinner=False)
 def fetch_market_caps(tickers: list[str]) -> pd.Series:
@@ -124,7 +124,7 @@ if submit:
     if not tickers or start_date >= end_date:
         st.error("Provide valid tickers and date range.")
     else:
-        df = fetch_data(tickers, start_date, end_date)
+        df = fetch_data(tickers, start_date, end_date, use_max)
         if df.empty:
             st.error("No data fetched.")
         else:
