@@ -14,28 +14,22 @@ st.set_page_config(
 plt.style.use('ggplot')
 
 # -- Data Fetching --
-# Added view confidence support
-
-
 @st.cache_data(show_spinner=False)
 def fetch_data(tickers: list[str], start_date: date, end_date: date, use_max: bool) -> pd.DataFrame:
-    """Fetch historical price data and cache results. Use max history if requested."""
+    """Fetch historical price data; use max history if requested."""
     all_data = []
     for ticker in tickers:
-        try:
-            yf_tkr = yf.Ticker(ticker)
-            if use_max:
-                hist = yf_tkr.history(period="max")[['Close']]
-            else:
-                hist = yf_tkr.history(start=start_date, end=end_date)[['Close']]
-            if hist.empty:
-                st.warning(f"No data for {ticker}.")
-                continue
-            hist = hist.rename(columns={'Close': ticker})
-            hist.index.name = 'Date'
-            all_data.append(hist)
-        except Exception as e:
-            st.error(f"Fetching error for {ticker}: {e}")
+        yf_tkr = yf.Ticker(ticker)
+        if use_max:
+            hist = yf_tkr.history(period="max")[['Close']]
+        else:
+            hist = yf_tkr.history(start=start_date, end=end_date)[['Close']]
+        if hist.empty:
+            st.warning(f"No data for {ticker}.")
+            continue
+        hist = hist.rename(columns={'Close': ticker})
+        hist.index.name = 'Date'
+        all_data.append(hist)
     if not all_data:
         return pd.DataFrame()
     return pd.concat(all_data, axis=1).dropna()
@@ -54,25 +48,34 @@ def fetch_market_caps(tickers: list[str]) -> pd.Series:
 
 # -- Model Computation --
 @st.cache_data(show_spinner=False)
-def run_black_litterman(df: pd.DataFrame, allow_short: bool, custom_views: dict, use_market_cap: bool) -> tuple[pd.Series, pd.Series, pd.DataFrame]:
-    """Compute BL posterior returns, covariance, and weights using either market caps or historical priors."""
-    returns = df.pct_change().dropna()
+def run_black_litterman(
+    df: pd.DataFrame,
+    allow_short: bool,
+    custom_views: dict,
+    use_market_cap: bool,
+    views_as_delta: bool
+) -> tuple[pd.Series, pd.Series, pd.DataFrame] | None:
+    """Compute BL posterior returns, covariance, and optimal weights."""
+    # Calculate priors
     mu = expected_returns.mean_historical_return(df)
     Sigma = risk_models.sample_cov(df)
 
-    # Determine absolute views and confidences
+    # Determine views (delta vs absolute)
     if custom_views:
-        abs_views = pd.Series(custom_views)
+        views_series = pd.Series(custom_views)
+        if views_as_delta:
+            abs_views = mu + views_series
+        else:
+            abs_views = views_series
         conf = pd.Series(0.5, index=abs_views.index)
     else:
         abs_views = mu
         conf = pd.Series(0.5, index=mu.index)
 
-    # Choose prior: market-implied or historical
+    # Instantiate BL model
     if use_market_cap:
         caps = fetch_market_caps(df.columns.tolist())
         w_mkt = caps / caps.sum()
-        # Set a risk aversion parameter delta
         delta = 2.5
         bl = BlackLittermanModel(
             cov_matrix=Sigma,
@@ -89,118 +92,73 @@ def run_black_litterman(df: pd.DataFrame, allow_short: bool, custom_views: dict,
             view_confidences=conf
         )
 
+    # Posterior
     ret_bl = bl.bl_returns()
     cov_bl = bl.bl_cov()
 
-        # Optimization
+    # Optimize
     try:
         if allow_short:
-            raw_w = bl.optimize()
+            raw_weights = bl.optimize()
         else:
             ef_post = EfficientFrontier(ret_bl, cov_bl)
             ef_post.max_sharpe()
-            raw_w = ef_post.clean_weights()
+            raw_weights = ef_post.clean_weights()
     except Exception as e:
         st.error(f"Optimization failed: {e}")
         return None
 
-    weights = pd.Series(raw_w)
-    return weights, ret_bl, cov_bl
+    return pd.Series(raw_weights), ret_bl, cov_bl
 
 # -- Sidebar Inputs --
 st.sidebar.header("🔧 Configuration")
 use_max = st.sidebar.checkbox("Use Maximum Historical Data", value=False)
-# Ticker input first
 tickers_input = st.sidebar.text_input("Tickers (comma-separated)")
-# Option for delta vs absolute views
-views_as_delta = st.sidebar.checkbox("Treat views as delta on historical means", value=False)
-# Prepare ticker list for dynamic date bounds and custom views
-ticker_list_tmp = [t.strip().upper() for t in tickers_input.split(',') if t.strip()]
-
-# Determine date bounds based on available history
-if use_max or not ticker_list_tmp:
-    global_min = date.today().replace(year=date.today().year-1)
-    global_max = date.today()
-else:
-    dates = []
-    for t in ticker_list_tmp:
-        try:
-            h = yf.Ticker(t).history(period="max")[['Close']]
-            if not h.empty:
-                dates.append((h.index.min().date(), h.index.max().date()))
-        except Exception:
-            pass
-    if dates:
-        global_min = min(d[0] for d in dates)
-        global_max = max(d[1] for d in dates)
-    else:
-        global_min = date.today().replace(year=date.today().year-1)
-        global_max = date.today()
-
-# Date inputs
-if use_max:
-    st.sidebar.info("Using full available history for each ticker")
-    start_date = None
-    end_date = None
-else:
-    start_date = st.sidebar.date_input(
-        "Start Date",
-        value=global_min,
-        min_value=global_min,
-        max_value=global_max
-    )
-    end_date = st.sidebar.date_input(
-        "End Date",
-        value=global_max,
-        min_value=global_min,
-        max_value=global_max
-    )
-# Other inputs
-tickers_input = tickers_input
+views_as_delta = st.sidebar.checkbox(
+    "Treat views as delta on historical means", value=False,
+    help="If checked, custom views will be added to the historical mean returns"
+)
 allow_short = st.sidebar.checkbox("Allow Short Positions")
 use_custom = st.sidebar.checkbox("Customize Expected Returns (Opinion)")
 use_market_cap = st.sidebar.checkbox("Use Market-Cap Prior", value=False)
+
+# Collect custom views
 custom_views = {}
-if use_custom and ticker_list_tmp:
+tickers_list = [t.strip().upper() for t in tickers_input.split(',') if t.strip()]
+if use_custom and tickers_list:
     st.sidebar.markdown("---")
-    st.sidebar.write("### Enter views (% expected return)")
-    for t in ticker_list_tmp:
-        val = st.sidebar.number_input(f"{t}", min_value=-100.0, max_value=100.0, value=0.0, step=0.01)
-        custom_views[t] = val / 100
-# Single button call
-submit = st.sidebar.button("Run Optimization")("Run Optimization")
+    st.sidebar.write("### Custom Views (% expected return)")
+    for tkr in tickers_list:
+        val = st.sidebar.number_input(
+            f"{tkr}", min_value=-100.0, max_value=100.0, value=0.0, step=0.01
+        )
+        custom_views[tkr] = val / 100
+
+submit = st.sidebar.button("Run Optimization")
 
 # -- Main --
 if submit:
-    tickers = [t.strip().upper() for t in tickers_input.split(',') if t.strip()]
-    if not tickers or start_date >= end_date:
-        st.error("Provide valid tickers and date range.")
+    # Validate tickers
+    if not tickers_list:
+        st.error("Enter at least one ticker symbol.")
     else:
-        df = fetch_data(tickers, start_date, end_date, use_max)
+        df = fetch_data(tickers_list, None, None, use_max)
         if df.empty:
-            st.error("No data fetched.")
+            st.error("No data fetched for the given tickers.")
         else:
-            # Show data range for each ticker
-            st.subheader("📅 Data Availability Ranges")
-            ranges = {}
-            for tkr in tickers:
-                try:
-                    hist_full = yf.Ticker(tkr).history(period="max")[['Close']]
-                    if not hist_full.empty:
-                        start = hist_full.index.min().date()
-                        end = hist_full.index.max().date()
-                        ranges[tkr] = {'Start Date': start, 'End Date': end}
-                except Exception as e:
-                    ranges[tkr] = {'Start Date': None, 'End Date': None}
-            ranges_df = pd.DataFrame.from_dict(ranges, orient='index')
-            st.dataframe(ranges_df)
-
-            result = run_black_litterman(df, allow_short, custom_views, use_market_cap)
+            result = run_black_litterman(
+                df,
+                allow_short,
+                custom_views,
+                use_market_cap,
+                views_as_delta
+            )
             if result is None:
-                st.error("Optimization could not be completed with the given views/constraints.")
+                st.error("Optimization could not be completed.")
                 st.stop()
             weights, ret_bl, cov_bl = result
-            # Compute frontier
+
+            # Efficient Frontier
             mu_hist = expected_returns.mean_historical_return(df)
             Sigma_hist = risk_models.sample_cov(df)
             ef = EfficientFrontier(mu_hist, Sigma_hist)
@@ -215,7 +173,8 @@ if submit:
             ax_ef.set_title('Efficient Frontier')
             ax_ef.legend()
 
-            st.header("📊 Optimization Results")
+            # Display
+            st.header("📊 Results")
             tabs = st.tabs(["Overview", "Efficient Frontier"])
             with tabs[0]:
                 st.subheader("Price Trends")
