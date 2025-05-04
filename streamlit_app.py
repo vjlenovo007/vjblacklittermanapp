@@ -69,7 +69,16 @@ with st.sidebar.form(key='input_form'):
     end_date   = st.date_input("End Date", value=date.today())
     tickers    = st.text_input("Tickers (comma-separated)")
     allow_short = st.checkbox("Allow Short Positions")
-    submit = st.form_submit_button(label='Run Optimization')
+    use_custom = st.checkbox("Customize Views (Opinion)")
+    custom_views = {}
+    if use_custom:
+        st.markdown("---")
+        st.write("### Enter your expected returns for each ticker:")
+        tickers_list_tmp = [t.strip().upper() for t in tickers.split(',') if t.strip()]
+        for tkr in tickers_list_tmp:
+            val = st.number_input(f"Expected return for {tkr} (%)", min_value=-100.0, max_value=100.0, value=0.0, format="%.2f")
+            custom_views[tkr] = val / 100
+    submit = st.form_submit_button(label='Run Optimization')(label='Run Optimization')
 
 if submit:
     tickers_list = [t.strip().upper() for t in tickers.split(',') if t.strip()]
