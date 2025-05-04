@@ -105,7 +105,7 @@ if submit:
             st.header("📊 Optimization Results")
             tabs = st.tabs(["Weights & Metrics", "Efficient Frontier"])
 
-            with tabs[0]:
+with tabs[0]:
     col1, col2 = st.columns([2,1])
     with col1:
         st.subheader("Optimal Weights")
@@ -123,9 +123,9 @@ if submit:
         st.subheader("Key Portfolio Metrics")
         metric_col1, metric_col2 = st.columns(2)
         metric_col1.metric("Max Sharpe Return", f"{r_max:.2%}")
-        metric_col2.metric("Volatility", f"{v_max:.2%}")
+        metric_col2.metric("Max Sharpe Volatility", f"{v_max:.2%}")
         metric_col1.metric("Min Vol Return", f"{r_min:.2%}")
-        metric_col2.metric("Volatility", f"{v_min:.2%}")
+        metric_col2.metric("Min Vol Volatility", f"{v_min:.2%}")
 
     st.subheader("Posterior Expected Returns & Covariance")
     st.dataframe(ret_bl.to_frame('Expected Return'))
