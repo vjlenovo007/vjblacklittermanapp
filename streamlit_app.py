@@ -105,7 +105,7 @@ submit = st.sidebar.button("Run Optimization")
 # -- Main --
 if submit:
     # Validate inputs
-    tickers_list = [t.strip().upper() for t in tickers.split(',') if t.strip()]
+    tickers_list = [t.strip().upper() for t in tickers_input.split(',') if t.strip()](',') if t.strip()]
     if not tickers_list or start_date >= end_date:
         st.error("Please provide valid tickers and date range.")
     else:
