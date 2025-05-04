@@ -14,6 +14,9 @@ st.set_page_config(
 plt.style.use('ggplot')
 
 # -- Data Fetching --
+# Added view confidence support
+
+
 @st.cache_data(show_spinner=False)
 def fetch_data(tickers: list[str], start_date: date, end_date: date, use_max: bool) -> pd.DataFrame:
     """Fetch historical price data and cache results. Use max history if requested."""
