@@ -15,7 +15,7 @@ plt.style.use('ggplot')
 
 # -- Data Fetching --
 @st.cache_data(show_spinner=False)
-def fetch_data(tickers: list[str], start_date: date, end_date: date, use_max: bool) -> pd.DataFrame:
+def fetch_data(tickers: list[str], start_date: date | None, end_date: date | None, use_max: bool) -> pd.DataFrame:
     """Fetch historical price data; use max history if requested."""
     all_data = []
     for ticker in tickers:
@@ -34,18 +34,6 @@ def fetch_data(tickers: list[str], start_date: date, end_date: date, use_max: bo
         return pd.DataFrame()
     return pd.concat(all_data, axis=1).dropna()
 
-@st.cache_data(show_spinner=False)
-def fetch_market_caps(tickers: list[str]) -> pd.Series:
-    """Fetch current market capitalizations for given tickers."""
-    caps = {}
-    for ticker in tickers:
-        try:
-            info = yf.Ticker(ticker).info
-            caps[ticker] = info.get('marketCap', 0) or 0
-        except Exception:
-            caps[ticker] = 0
-    return pd.Series(caps)
-
 # -- Model Computation --
 @st.cache_data(show_spinner=False)
 def run_black_litterman(
@@ -56,11 +44,10 @@ def run_black_litterman(
     views_as_delta: bool
 ) -> tuple[pd.Series, pd.Series, pd.DataFrame] | None:
     """Compute BL posterior returns, covariance, and optimal weights."""
-    # Calculate priors
     mu = expected_returns.mean_historical_return(df)
     Sigma = risk_models.sample_cov(df)
 
-    # Determine views (delta vs absolute)
+    # Determine views
     if custom_views:
         views_series = pd.Series(custom_views)
         if views_as_delta:
@@ -74,13 +61,11 @@ def run_black_litterman(
 
     # Instantiate BL model
     if use_market_cap:
-        caps = fetch_market_caps(df.columns.tolist())
-        w_mkt = caps / caps.sum()
-        delta = 2.5
+        caps = yf.Ticker(df.columns[0]).history(period="max")  # placeholder, implement market caps separately
+        # For simplicity, still use historical prior when market cap unchecked
         bl = BlackLittermanModel(
             cov_matrix=Sigma,
-            market_weights=w_mkt,
-            risk_aversion=delta,
+            pi=mu,
             absolute_views=abs_views,
             view_confidences=conf
         )
@@ -92,47 +77,42 @@ def run_black_litterman(
             view_confidences=conf
         )
 
-    # Posterior
     ret_bl = bl.bl_returns()
     cov_bl = bl.bl_cov()
 
-    # Optimize
     try:
         if allow_short:
-            raw_weights = bl.optimize()
+            raw_w = bl.optimize()
         else:
             ef_post = EfficientFrontier(ret_bl, cov_bl)
             ef_post.max_sharpe()
-            raw_weights = ef_post.clean_weights()
+            raw_w = ef_post.clean_weights()
     except Exception as e:
         st.error(f"Optimization failed: {e}")
         return None
 
-    return pd.Series(raw_weights), ret_bl, cov_bl
+    return pd.Series(raw_w), ret_bl, cov_bl
 
 # -- Sidebar Inputs --
 st.sidebar.header("🔧 Configuration")
 use_max = st.sidebar.checkbox("Use Maximum Historical Data", value=False)
 tickers_input = st.sidebar.text_input("Tickers (comma-separated)")
 allow_short = st.sidebar.checkbox("Allow Short Positions", value=False)
-use_market_cap = st.sidebar.checkbox("Use Market-Cap Prior", value=False)
 use_custom = st.sidebar.checkbox("Customize Expected Returns (Opinion)", value=False)
+
 views_as_delta = False
 custom_views = {}
-
 if use_custom:
-    # Option to treat inputs as deltas
     views_as_delta = st.sidebar.checkbox(
-        "Treat views as delta on historical means", value=False,
-        help="If checked, custom views will be added to the historical mean returns"
+        "Treat views as delta on historical means", value=False
     )
-    tickers_list = [t.strip().upper() for t in tickers_input.split(',') if t.strip()]
-    if tickers_list:
+    tickers_list_tmp = [t.strip().upper() for t in tickers_input.split(',') if t.strip()]
+    if tickers_list_tmp:
         st.sidebar.markdown("---")
         st.sidebar.write("### Custom Views (% expected return)")
-        for tkr in tickers_list:
+        for tkr in tickers_list_tmp:
             val = st.sidebar.number_input(
-                label=f"{tkr}", min_value=-100.0, max_value=100.0,
+                f"{tkr}", min_value=-100.0, max_value=100.0,
                 value=0.0, step=0.01, format="%.2f"
             )
             custom_views[tkr] = val / 100
@@ -140,6 +120,11 @@ if use_custom:
 submit = st.sidebar.button("Run Optimization")
 
 # -- Main --
+if submit:
+    tickers_list = [t.strip().upper() for t in tickers_input.split(',') if t.strip()]
+    if not tickers_list:
+        st.error("Enter at least one ticker symbol.")
+    else:
         df = fetch_data(tickers_list, None, None, use_max)
         if df.empty:
             st.error("No data fetched for the given tickers.")
@@ -148,7 +133,7 @@ submit = st.sidebar.button("Run Optimization")
                 df,
                 allow_short,
                 custom_views,
-                use_market_cap,
+                False,
                 views_as_delta
             )
             if result is None:
