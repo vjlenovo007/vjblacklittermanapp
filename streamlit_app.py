@@ -57,7 +57,7 @@ def run_black_litterman(
         abs_views = mu
         conf = pd.Series(0.5, index=mu.index)
 
-    # Instantiate BL model with chosen prior
+        # Instantiate BL model with chosen prior
     if use_market_cap:
         caps = fetch_market_caps(df.columns.tolist())
         w_mkt = caps / caps.sum()
@@ -76,12 +76,9 @@ def run_black_litterman(
             absolute_views=abs_views,
             view_confidences=conf
         )
-        cov_matrix=Sigma,
-        pi=mu,
-        absolute_views=abs_views,
-        view_confidences=conf
-    )
+    # Compute posterior returns and covariance
     ret_bl = bl.bl_returns()
+()
     cov_bl = bl.bl_cov()
 
     try:
