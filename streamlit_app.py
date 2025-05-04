@@ -100,19 +100,23 @@ def main():
             with col1:
                 st.subheader("Optimal Weights")
                 st.bar_chart(weights)
-                # Handle pie chart when negative weights present
                 fig_w, ax_w = plt.subplots()
                 positive_weights = weights.clip(lower=0)
                 if positive_weights.sum() > 0:
                     normalized = positive_weights / positive_weights.sum()
                     normalized.plot.pie(autopct='%.1f%%', ax=ax_w)
                     ax_w.set_ylabel('')
+                    ax_w.set_title('Portfolio Weight Distribution')
                     st.pyplot(fig_w)
                 else:
                     st.info("Pie chart skipped due to negative or zero weights.")
             with col2:
                 st.subheader("Posterior Expected Returns")
                 st.dataframe(ret_bl.to_frame("Expected Return"))
+                fig_r, ax_r = plt.subplots()
+                ret_bl.plot.bar(ax=ax_r)
+                ax_r.set_title('Posterior Expected Returns')
+                st.pyplot(fig_r)
                 st.subheader("Posterior Covariance")
                 st.dataframe(cov_bl)
         except Exception as e:
@@ -125,6 +129,7 @@ def main():
             ef = EfficientFrontier(mu, Sigma)
             fig_ef, ax_ef = plt.subplots()
             plotting.plot_efficient_frontier(ef, ax=ax_ef, show_assets=False)
+            ax_ef.set_title('Efficient Frontier')
             st.subheader("Efficient Frontier")
             st.pyplot(fig_ef)
         except Exception as e:
