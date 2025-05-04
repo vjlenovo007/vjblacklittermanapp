@@ -37,9 +37,10 @@ def fetch_data(tickers: list[str]) -> pd.DataFrame:
         return pd.DataFrame()
 
 @st.cache_data(show_spinner=False)
-def run_black_litterman(df: pd.DataFrame) -> tuple[pd.Series, pd.Series, pd.DataFrame] | None:
+def run_black_litterman(df: pd.DataFrame, allow_short: bool) -> tuple[pd.Series, pd.Series, pd.DataFrame] | None:
     """
     Calculate Black-Litterman posterior returns, covariance, and optimal weights.
+    If allow_short is False, enforce no-short constraints via EfficientFrontier.
     Returns None on error.
     """
     try:
@@ -54,13 +55,22 @@ def run_black_litterman(df: pd.DataFrame) -> tuple[pd.Series, pd.Series, pd.Data
         absolute_views = mu
         view_confidences = pd.Series(0.5, index=mu.index)
 
+        # Black-Litterman model
         bl = BlackLittermanModel(cov_matrix=Sigma, pi=mu,
                                   absolute_views=absolute_views,
                                   view_confidences=view_confidences)
         ret_bl = bl.bl_returns()
         cov_bl = bl.bl_cov()
-        raw_weights = bl.optimize()
-        weights = pd.Series(raw_weights)
+
+        # Optimization
+        if allow_short:
+            raw_weights = bl.optimize()
+            weights = pd.Series(raw_weights)
+        else:
+            # No shorting: use EfficientFrontier on posterior estimates
+            ef_post = EfficientFrontier(ret_bl, cov_bl)
+            ef_post.max_sharpe()
+            weights = pd.Series(ef_post.clean_weights())
         return weights, ret_bl, cov_bl
     except Exception as e:
         st.error(f"Error running Black-Litterman model: {e}")
@@ -69,10 +79,11 @@ def run_black_litterman(df: pd.DataFrame) -> tuple[pd.Series, pd.Series, pd.Data
 # -- Streamlit UI --
 def main():
     st.title("Black-Litterman Portfolio Optimizer")
-    st.markdown("Enter comma-separated ticker symbols (e.g. AAPL, MSFT) to optimize your portfolio.")
+    st.markdown("Enter comma-separated ticker symbols (e.g. AAPL, MSFT) and choose constraints to optimize your portfolio.")
 
     tickers_input = st.text_input("Ticker Symbols:")
     tickers = [t.strip().upper() for t in tickers_input.split(',') if t.strip()]
+    allow_short = st.checkbox("Allow short positions", value=False)
 
     if st.button("Fetch & Optimize"):
         if not tickers:
@@ -88,7 +99,7 @@ def main():
         st.success(f"Fetched data for {len(tickers)} symbols from {df.index.min().date()} to {df.index.max().date()}")
 
         with st.spinner("Running Black-Litterman model..."):
-            result = run_black_litterman(df)
+            result = run_black_litterman(df, allow_short)
         if result is None:
             return
         weights, ret_bl, cov_bl = result
@@ -101,10 +112,10 @@ def main():
                 st.subheader("Optimal Weights")
                 st.bar_chart(weights)
                 fig_w, ax_w = plt.subplots()
-                positive_weights = weights.clip(lower=0)
-                if positive_weights.sum() > 0:
-                    normalized = positive_weights / positive_weights.sum()
-                    normalized.plot.pie(autopct='%.1f%%', ax=ax_w)
+                pos = weights.clip(lower=0)
+                if pos.sum() > 0:
+                    norm = pos / pos.sum()
+                    norm.plot.pie(autopct='%.1f%%', ax=ax_w)
                     ax_w.set_ylabel('')
                     ax_w.set_title('Portfolio Weight Distribution')
                     st.pyplot(fig_w)
@@ -124,9 +135,9 @@ def main():
 
         # Efficient Frontier
         try:
-            mu = expected_returns.mean_historical_return(df)
-            Sigma = risk_models.sample_cov(df)
-            ef = EfficientFrontier(mu, Sigma)
+            mu_hist = expected_returns.mean_historical_return(df)
+            Sigma_hist = risk_models.sample_cov(df)
+            ef = EfficientFrontier(mu_hist, Sigma_hist)
             fig_ef, ax_ef = plt.subplots()
             plotting.plot_efficient_frontier(ef, ax=ax_ef, show_assets=False)
             ax_ef.set_title('Efficient Frontier')
