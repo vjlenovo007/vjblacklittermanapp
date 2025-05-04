@@ -36,6 +36,19 @@ def fetch_data(tickers: list[str], start_date: date | None, end_date: date | Non
         return pd.DataFrame()
     return pd.concat(all_data, axis=1).dropna()
 
+# -- Market Cap Fetching --
+@st.cache_data(show_spinner=False)
+def fetch_market_caps(tickers: list[str]) -> pd.Series:
+    """Fetch current market capitalizations for given tickers."""
+    caps = {}
+    for ticker in tickers:
+        try:
+            info = yf.Ticker(ticker).info
+            caps[ticker] = info.get('marketCap', 0) or 0
+        except Exception:
+            caps[ticker] = 0
+    return pd.Series(caps)
+
 # -- Model Computation --
 @st.cache_data(show_spinner=False)
 def run_black_litterman(
